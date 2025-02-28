@@ -1,6 +1,20 @@
 const User = require("../models/agentModel");
 const jwt = require("jsonwebtoken");
 
+const Access = {
+  user: ["get_all_lead", "get_lead", "update_lead"],
+  TeamLeader: [
+    "add_agent",
+    "get_all_agent",
+    "EditAgentDetails",
+    "add_lead",
+    "get_all_lead",
+    "UpdateLeadByLeadId",
+    "deleteLeadAttechmentHistory",
+    "agent_delete",
+  ],
+};
+
 const auth = async (req, res, next) => {
   try {
     const token = req.header("authorization")?.split(" ")[1];
@@ -15,7 +29,27 @@ const auth = async (req, res, next) => {
       const user = await User.findOne({ _id: decoded.id });
       console.log("user", user);
       req.user = user;
-      next();
+      if (user.role == "user") {
+        const userAccessArr = Access.user.filter((v) => req.path.includes(v));
+        if (userAccessArr.length < 1) {
+          return res.status(401).json({ msg: "your are unauthorized" });
+        } else {
+          next();
+          return;
+        }
+      }
+      if (user.role == "TeamLeader") {
+        const userAccessArr = Access.TeamLeader.filter((v) =>
+          req.path.includes(v)
+        );
+        if (userAccessArr.length < 1) {
+          return res.status(401).json({ msg: "your are unauthorized" });
+        } else {
+          next();
+          return;
+        }
+      }
+      if (user.role == "admin") next();
     } catch (err) {
       console.log("err", err);
       return res.status(401).json({ msg: "Unauthorized" });
@@ -26,4 +60,4 @@ const auth = async (req, res, next) => {
   }
 };
 
-module.exports = auth;
+module.exports = { auth };
